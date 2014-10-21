@@ -48,40 +48,8 @@ executed once an hour.
 
 Changelog
 ---------
-<<<<<<< HEAD
-=======
 2014-10-21
 fix: spelling error in sync.php
-2014-07-20
-fix: make auth without ldap connection work
-remove deprecated get_context_instance
-2013-11-27
-fix: cohort enrolments are now removed correctly
-
-2013-11-23
-corrected some typos, removed null_progress_trace.close
-
-2013-11-19
-make openlml instances independent from cohort instances
-
-2013-10-10
-check teachers role independent of category existence
-
-2013-10-08
-fix some errors
-clean up database from old lml assignments / enrolments
-fix display of php notice messages
-fix small php coding error
-
-2013-09-29
-changed quite some code to be conform to moodle 2.5.x
-some fixes for moodle 2.5.x
-change debugging -> trigger_error (,E_USER_NOTICE) to simplify debugging
-
-2013-09-13
-fixed new parameter in enrol_cohort_sync in moodle 2.5.x
-
->>>>>>> b0eeeb2... Fix spelling error in sync.php.
 2012-10-24
 course->idnumber is a unique key, so make
  course->idnumber unique by prepending 'shortname:'.
