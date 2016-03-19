@@ -48,6 +48,8 @@ executed once an hour.
 
 Changelog
 ---------
+2016-03-19 fixed several errors
+
 2015-02-02 optimized teacher record fetching, more debug messages for developers
 
 2015-01-31 add debug messages for ldap connection/close, init_teacher_array, is_teacher
@@ -96,4 +98,4 @@ fixed cron patch for auth_ldap to run once an hour.
 in moodle users database.
 
 Hildesheim, Germany
-Frank Schütte,2015(fschuett@gymnasium-himmelsthuer.de)
+Frank Schütte,2016(fschuett@gymhim.de)
