@@ -48,6 +48,8 @@ executed once an hour.
 
 Changelog
 ---------
+2016-06-16 fix for unenrolment on missing ldap connection
+
 2016-03-19 fixed several errors
 
 2015-02-02 optimized teacher record fetching, more debug messages for developers
