@@ -33,12 +33,14 @@ if ($ADMIN->fulltree) {
     $yesno = array(get_string('no'), get_string('yes'));
 
     // Heading.
-    $settings->add(new admin_setting_heading('enrol_openlml_settings', '',
+    $settings->add(new admin_setting_heading('enrol_openlml_settings', 
+    		get_string('pluginname','enrol_openlml'),
             get_string('pluginname_desc', 'enrol_openlml')));
 
     // Common settings.
     $settings->add(new admin_setting_heading('enrol_openlml_common_settings',
-            get_string('common_settings', 'enrol_openlml'), ''));
+            get_string('common_settings', 'enrol_openlml'),
+    		get_string('common_settings_desc', 'enrol_openlml')));
     $settings->add(new admin_setting_configtext_trim_lower('enrol_openlml/contexts',
             get_string('contexts_key', 'enrol_openlml'),
             get_string('contexts', 'enrol_openlml'), 'ou=groups,dc=linuxmuster,dc=lokal'));
@@ -51,7 +53,8 @@ if ($ADMIN->fulltree) {
 
     // Teachers settings.
     $settings->add(new admin_setting_heading('enrol_openlml_teacher_settings',
-            get_string('teacher_settings', 'enrol_openlml'), ''));
+            get_string('teacher_settings', 'enrol_openlml'), 
+    		get_string('teacher_settings_desc','enrol_openlml')));
     $settings->add(new admin_setting_configtext_trim_lower('enrol_openlml/teachers_group_name',
             get_string('teachers_group_name_key', 'enrol_openlml'),
             get_string('teachers_group_name', 'enrol_openlml'), 'teachers'));
@@ -69,7 +72,8 @@ if ($ADMIN->fulltree) {
 
     // Teachers context settings.
     $settings->add(new admin_setting_heading('enrol_openlml_teachers_context_settings',
-            get_string('teachers_context_settings', 'enrol_openlml'), ''));
+            get_string('teachers_context_settings', 'enrol_openlml'), 
+    		get_string('teachers_context_settings_desc','enrol_openlml'));
     $settings->add(new admin_setting_configtext_trim_lower('enrol_openlml/teachers_course_context',
             get_string('teachers_course_context_key', 'enrol_openlml'),
             get_string('teachers_course_context', 'enrol_openlml'), 'Lehrer'));
@@ -96,7 +100,8 @@ if ($ADMIN->fulltree) {
 
     // Students settings.
     $settings->add(new admin_setting_heading('enrol_openlml_students_settings',
-            get_string('students_settings', 'enrol_openlml'), ''));
+            get_string('students_settings', 'enrol_openlml'), 
+    		get_string('students_settings_desc', 'enrol_openlml')));
     $settings->add(new admin_setting_configtext_trim_lower('enrol_openlml/student_class_numbers',
             get_string('student_class_numbers_key', 'enrol_openlml'),
             get_string('student_class_numbers', 'enrol_openlml'), '5,6,7,8,9,10,11,12,extra'));
@@ -112,5 +117,41 @@ if ($ADMIN->fulltree) {
         $settings->add(new admin_setting_configselect('enrol_openlml/student_role',
             get_string('student_role_key', 'enrol_openlml'),
             get_string('student_role', 'enrol_openlml'), $student->id, $options));
+    }
+    
+    // Class settings.
+    $settings->add(new admin_setting_heading('enrol_openlml_class_settings',
+    		get_string('class_settings','enrol_openlml'), 
+    		get_string('class_settings_desc','enrol_openlml')));
+    $settings->add(new admin_setting_configtext_trim_lower('enrol_openlml/class_category',
+    		get_string('class_category', 'enrol_openlml'),
+    		get_string('class_category', 'enrol_openlml'), 'classes'));
+    $settings->add(new admin_setting_configcheckbox('enrol_openlml/class_category_autocreate',
+    		get_string('class_category_autocreate','enrol_openlml'),get_string('class_category_autocreate_desc','enrol_openlml'),1));
+    $settings->add(new admin_setting_configcheckbox('enrol_openlml/class_autocreate',
+    		get_string('class_autocreate','enrol_openlml'),get_string('class_autocreate_desc','enrol_openlml'),1));
+    $settings->add(new admin_setting_configcheckbox('enrol_openlml/class_autoremove',
+    		get_string('class_autoremove','enrol_openlml'),get_string('class_autoremove_desc','enrol_openlml'),1));
+    $settings->add(new admin_setting_configtext_trim_lower('enrol_openlml/class_template',
+    		get_string('class_template', 'enrol_openlml'),
+    		get_string('class_template', 'enrol_openlml'), 'template'));
+    $settings->add(new admin_setting_configtext_trim_lower('enrol_openlml/class_numbers',
+    		get_string('class_numbers_key', 'enrol_openlml'),
+    		get_string('class_numbers', 'enrol_openlml'), '5,6,7,8,9,10,11,12'));
+    if (!during_initial_install()) {
+        $options = get_assignable_roles(context_system::instance());
+        $teacher = get_archetype_roles('teacher');
+        $teacher = reset($teacher);
+        $settings->add(new admin_setting_configselect('enrol_openlml/class_teachers_role',
+            get_string('class_teachers_role_key', 'enrol_openlml'),
+            get_string('class_teachers_role', 'enrol_openlml'), $teacher->id, $options));
+    }
+    if (!during_initial_install()) {
+        $options = get_default_enrol_roles(context_system::instance());
+        $student = get_archetype_roles('student');
+        $student = reset($student);
+        $settings->add(new admin_setting_configselect('enrol_openlml/class_students_role',
+            get_string('class_students_role_key', 'enrol_openlml'),
+            get_string('class_students_role', 'enrol_openlml'), $student->id, $options));
     }
 }
