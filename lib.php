@@ -27,7 +27,7 @@
  * @copyright 2013 Frank Schütte <fschuett@gymnasium-himmelsthuer.de>
  * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
+//ini_set('display_errors',1);
 function kill( $data ) { die( var_dump( $data ) ); }
 
 defined ( 'MOODLE_INTERNAL' ) || die ();
@@ -1127,10 +1127,10 @@ class enrol_openlml_plugin extends enrol_plugin {
 				$this->remove_classes($to_remove);
 			}
 		}
-		if ($userid) {
+		if ($userid && strcmp($userid,"*") !== 0) {
 			$this->sync_classes_enrolments_user($userid);
 		} else {
-			$this->sync_classes_enrolements();
+			$this->sync_classes_enrolments();
 		}
 	}
 	
@@ -1156,25 +1156,21 @@ class enrol_openlml_plugin extends enrol_plugin {
 		}
 	}
 	
-	function sync_class_enrolments() {
+	function sync_classes_enrolments() {
 		global $CFG, $DB;
 		$class_obj = $this->get_class_category();
 		if (!$class_obj) {
 			return;
 		}
 		$mdl_classes = $this->get_classes_moodle();
-		foreach($mdl_classes as $class) {
+		foreach($mdl_classes as $class => $course) {
 			$ldap_members = $this->ldap_get_group_members($class, true);
-			$course = $DB->get_records('course', array( 
-				'shortname' => $class,
-				'category' => $class_obj->id),'*', IGNORE_MULTIPLE);
-			if (!$course) {
-				continue;
-			}
-			$context = couse_context::instance($course->id);
+			$context = context_course::instance($course->id);
 			$mdl_members = get_enrolled_users($context);
 			$to_enrol = array_diff($ldap_members, $mdl_members);
 			$to_unenrol = array_diff($mdl_members, $ldap_members);
+			$to_enrol_teachers = array();
+			$to_enrol_students = array();
 			foreach($to_enrol as $user) {
 				if ($this->is_teacher($user)) {
 					$to_enrol_teachers[] = $user;
@@ -1182,39 +1178,63 @@ class enrol_openlml_plugin extends enrol_plugin {
 					$to_enrol_students[] = $user;
 				}
 			}
-			if ($to_enrol_teachers && !empty($to_enrol_teachers)) {
+			if (!empty($to_enrol_teachers)) {
 				$this->class_enrol($context, $to_enrol_teachers, $this->config->class_teachers_role);
 			}
-			if ($to_enrol_students && !empty($to_enrol_students)) {
+			if (!empty($to_enrol_students)) {
 				$this->class_enrol($context, $to_enrol_students, $this->config->class_students_role);
 			}
-			if ($to_unenrol && !empty($to_unenrol)) {
+			if (!empty($to_unenrol)) {
 				$this->class_unenrol($context, $to_unenrol);
 			}
 		}
 	}
 	
 	function class_enrol($context, $users, $role) {
-		global $CFG;
-		require_once($CFG->libdir . '/enrollib.php');
+		global $CFG,$DB;
+		require_once($CFG->libdir . '/accesslib.php');
 		if (!is_array($users)) {
-			enrollib::enrol_user($context, $users, $role);
-		} else {
-			foreach ($users as $user) {
-				enrollib::enrol_user($context, $user, $role);
+			$users = array($users);
+		}
+		foreach ($users as $username) {
+			$user = $DB->get_record ( 'user', array (
+						'username' => $username,
+						'auth' => 'ldap' 
+				) );
+			if (!$user) {
+				debugging ( $this->errorlogtag . "class_enrol(".$context->id."$username) not found!");
+				continue;
 			}
+			if (! role_assign ( $role, $user->id, $context, 'enrol_openlml' )) {
+				debugging ( $this->errorlogtag . 'could not assign role (' . $role . 
+					') to user (' . $user->username . ') in context (' . $context->id . ').' );
+			}
+			debugging ( $this->errorlogtag . "assign class role for " . $user->username . 
+				" in class " . $context->id, DEBUG_DEVELOPER );
 		}
 	}
 	
 	function class_unenrol($context, $users) {
-		global $CFG;
-		require_once($CFG->libdir . '/enrollib.php');
+		global $CFG,$DB;
+		require_once($CFG->libdir . '/accesslib.php');
 		if (!is_array($users)) {
-			enrollib::unenrol_user($context, $users);
-		} else {
-			foreach ($users as $user) {
-				enrollib::unenrol_user($context, $user);
+			$users = array($users);
+		}
+		foreach ($users as $username) {
+			$user = $DB->get_record ( 'user', array (
+						'username' => $username,
+						'auth' => 'ldap' 
+				) );
+			if (!$user) {
+				debugging ( $this->errorlogtag . "class_unenrol(".$context->id."$username) not found!");
+				continue;
 			}
+			if (! role_unassign ( $role, $user->id, $context, 'enrol_openlml' )) {
+				debugging ( $this->errorlogtag . 'could not unassign role (' . $role . 
+					') to user (' . $user->username . ') in context (' . $context->id . ').' );
+			}
+			debugging ( $this->errorlogtag . "unassign class role for " . $user->username . 
+				" in class " . $context->id, DEBUG_DEVELOPER );
 		}
 	}
 	
