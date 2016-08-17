@@ -27,6 +27,9 @@
  * @copyright 2013 Frank Schütte <fschuett@gymnasium-himmelsthuer.de>
  * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+
+function kill( $data ) { die( var_dump( $data ) ); }
+
 defined ( 'MOODLE_INTERNAL' ) || die ();
 class enrol_openlml_plugin extends enrol_plugin {
 	protected $enroltype = 'enrol_openlml';
@@ -894,6 +897,7 @@ class enrol_openlml_plugin extends enrol_plugin {
 			if (! $cat_obj) {
 				debugging ( $this->errorlogtag . 'autocreate/autoremove could not create teacher course context' );
 			}
+			context_coursecat::instance ( 0 )->mark_dirty ();
 		}
 		return $cat_obj;
 	}
@@ -915,6 +919,7 @@ class enrol_openlml_plugin extends enrol_plugin {
 			if (! $this->attic_obj) {
 				debugging ( $this->errorlogtag . 'autocreate/autoremove could not create removed teachers context' );
 			}
+			context_coursecat::instance ( 0 )->mark_dirty ();
 		}
 		return $this->attic_obj;
 	}
@@ -926,18 +931,22 @@ class enrol_openlml_plugin extends enrol_plugin {
 	 */
 	private function get_class_category() {
 		global $CFG, $DB;
+		require_once ($CFG->libdir . '/coursecatlib.php');
 		// Create class category if needed.
 		$cat_obj = $DB->get_record ( 'course_categories', array (
 				'idnumber' => $this->idnumber_class_cat,
 				'parent' => 0 
-		), '*', IGNORE_MULTIPLE );
+		), 'id', IGNORE_MULTIPLE );
 		if (! $cat_obj && $this->config->class_category_autocreate) {
 			$cat_obj = $this->create_category ( $this->config->class_category, $this->idnumber_class_cat, get_string ( 'class_category_description', 'enrol_openlml' ) );
 			if ($cat_obj) {
 				debugging ( $this->errorlogtag . "created class course category " . $cat_obj->id, DEBUG_DEVELOPER );
+				context_coursecat::instance ( 0 )->mark_dirty ();
 			} else {
 				debugging ( $this->errorlogtag . 'autocreate/autoremove could not create class course context' );
 			}
+		} else {
+			$cat_obj = coursecat::get($cat_obj->id);
 		}
 		if (! $cat_obj) {
 			debugging ( $this->errorlogtag . "class category $this->{idnumber_class_cat} not found." );
@@ -996,7 +1005,7 @@ class enrol_openlml_plugin extends enrol_plugin {
 			$pattern [] = '(' . $this->config->attribute . '=' . $c . '*)';
 		}
 		$pattern = '(|' . implode ( $pattern ) . ')';
-		return ldap_get_grouplist($userid, $pattern, true);
+		return $this->ldap_get_grouplist($userid, $pattern, true);
 	}
 	
 	/**
@@ -1015,15 +1024,18 @@ class enrol_openlml_plugin extends enrol_plugin {
 		}
 		//copied from externallib.php#1179
 		$template = $DB->get_record('course', array(
-				shortname => $this->config->class_template, 
-				parent => $classcat->id),'*', IGNORE_MULTIPLE);
+				'shortname' => $this->config->class_template, 
+				'category' => $classcat->id),'*', IGNORE_MULTIPLE);
 		if ($template) {
 			$template = $template->id;
 		}
 		foreach ($classes as $c) {
 			$this->create_class($c, $classcat->id, $template);
+			$newclasses = true;
 		}
-		//TODO remove backup file
+		if ($newclasses) {
+			context_coursecat::instance ( $classcat->id )->mark_dirty ();
+		}
 	}
 	
 	/**
@@ -1042,7 +1054,9 @@ class enrol_openlml_plugin extends enrol_plugin {
 		}
 		$ids = array();
 		foreach ($classes as $c) {
-			$records = $DB->get_record('course', array(shortname => $class, parent => $classcat->id),'*');
+			$records = $DB->get_record('course', array(
+				'shortname' => $class, 
+				'category' => $classcat->id),'*');
 			foreach ($records as $r) {
 				$ids[] = $r->id;
 			}
@@ -1062,9 +1076,15 @@ class enrol_openlml_plugin extends enrol_plugin {
 	private function create_class($class, $catid, $template = 0) {
 		global $CFG;
 		require_once ($CFG->libdir . '/externallib.php');
+		require_once ($CFG->dirroot . '/course/lib.php');
 		debugging($this->errorlogtag . "create_class ($class, $catid, $template) started...");
 		if (!$template) {
-			$courseid = restore_dbops::create_new_course($class, $class, $catid);
+			$data = new stdclass();
+			$data->shortname = $class;
+			$data->fullname = get_string("class_localname","enrol_openlml") . " " . $class;
+			$data->visible = 1;
+			$data->category = $catid;
+			$courseid = create_course($data);
 		} else {
 			$course = externallib::duplicate_course($template, $class, $class, $catid, 1);
 		}
@@ -1093,16 +1113,16 @@ class enrol_openlml_plugin extends enrol_plugin {
 			return;
 		}
 		debugging($this->errorlogtag . "sync_classes($userid)...", DEBUG_DEVELOPER);
-		$lap_classes = $this->get_classes_ldap();
+		$ldap_classes = $this->get_classes_ldap();
 		$mdl_classes = $this->get_classes_moodle();
 		if ($this->config->class_autocreate) {
-			$to_add = array_diff(array_values($ldap_classes),$mdl_classes);
+			$to_add = array_diff($ldap_classes,array_keys($mdl_classes));
 			if (!empty($to_add)) {
 				$this->create_classes($to_add);
 			}
 		}
 		if ($this->config->class_autoremove) {
-			$to_remove = array_diff($mdl_classes,$ldap_classes);
+			$to_remove = array_diff(array_keys($mdl_classes),$ldap_classes);
 			if (!empty($to_remove)) {
 				$this->remove_classes($to_remove);
 			}
@@ -1119,20 +1139,20 @@ class enrol_openlml_plugin extends enrol_plugin {
 		if (!$userid) {
 			return;
 		}
-		if (is_teacher($userid)) {
+		if ($this->is_teacher($userid)) {
 			$role = $this->config->class_teachers_role;
 		}	else {
 			$role = $this->config->class_students_role;
 		}
 		$ldap_classes = $this->get_classes_ldap($userid);
 		$mdl_classes = $this->get_classes_moodle($userid);
-		$to_enrol = array_diff(array_values($lap_classes),$mdl_classes);
-		$to_unenrol = array_diff($mdl_classes, array_values($ldap_classes));
-		foreach($to_enrol as $id => $class) {
-			$this->class_enrol($userid, $id);
+		$to_enrol = array_diff($ldap_classes,array_keys($mdl_classes));
+		$to_unenrol = array_diff(array_keys($mdl_classes), $ldap_classes);
+		foreach($to_enrol as $class) {
+			$this->class_enrol($userid, $mdl_classes[$class]->id, $role);
 		}
 		foreach($to_unenrol as $class) {
-			$this->class_unenrol($user, $class);
+			$this->class_unenrol($user, $mdl_classes[$class]->id);
 		}
 	}
 	
@@ -1145,8 +1165,9 @@ class enrol_openlml_plugin extends enrol_plugin {
 		$mdl_classes = $this->get_classes_moodle();
 		foreach($mdl_classes as $class) {
 			$ldap_members = $this->ldap_get_group_members($class, true);
-			$course = $DB->get_records('course', array( shortname => $class,
-					parent => $class_obj->id),'*', IGNORE_MULTIPLE);
+			$course = $DB->get_records('course', array( 
+				'shortname' => $class,
+				'category' => $class_obj->id),'*', IGNORE_MULTIPLE);
 			if (!$course) {
 				continue;
 			}
@@ -1176,16 +1197,24 @@ class enrol_openlml_plugin extends enrol_plugin {
 	function class_enrol($context, $users, $role) {
 		global $CFG;
 		require_once($CFG->libdir . '/enrollib.php');
-		foreach ($users as $user) {
-			enrollib::enrol_user($context, $user, $role);
+		if (!is_array($users)) {
+			enrollib::enrol_user($context, $users, $role);
+		} else {
+			foreach ($users as $user) {
+				enrollib::enrol_user($context, $user, $role);
+			}
 		}
 	}
 	
 	function class_unenrol($context, $users) {
 		global $CFG;
 		require_once($CFG->libdir . '/enrollib.php');
-		foreach ($users as $user) {
-			enrollib::unenrol_user($context, $user);
+		if (!is_array($users)) {
+			enrollib::unenrol_user($context, $users);
+		} else {
+			foreach ($users as $user) {
+				enrollib::unenrol_user($context, $user);
+			}
 		}
 	}
 	

@@ -137,13 +137,13 @@ if ($ADMIN->fulltree) {
     		get_string('class_autoremove_desc','enrol_openlml'),1));
     $settings->add(new admin_setting_configtext_trim_lower('enrol_openlml/class_template',
     		get_string('class_template', 'enrol_openlml'),
-    		get_string('class_template', 'enrol_openlml'), 'template'));
+    		get_string('class_template_desc', 'enrol_openlml'), 'template'));
     $settings->add(new admin_setting_configtext_trim_lower('enrol_openlml/class_prefixes',
     		get_string('class_prefixes', 'enrol_openlml'),
     		get_string('class_prefixes_desc', 'enrol_openlml'), '5,6,7,8,9,10,11,12'));
     if (!during_initial_install()) {
-        $options = get_assignable_roles(context_system::instance());
-        $teacher = get_archetype_roles('trainer');
+        $options = get_default_enrol_roles(context_system::instance());
+        $teacher = get_archetype_roles('teacher');
         $teacher = reset($teacher);
         $settings->add(new admin_setting_configselect('enrol_openlml/class_teachers_role',
             get_string('class_teachers_role', 'enrol_openlml'),

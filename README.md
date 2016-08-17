@@ -39,6 +39,8 @@ Activate it and schedule it for hourly execution.
 
 Changelog
 ---------
+2016-08-16 add classes creation/removing and enrolment
+
 2016-06-16 fix unenrolment for failing ldap connection error
 
 2016-03-19 fix several errors
