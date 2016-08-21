@@ -27,9 +27,9 @@
  * @copyright 2013 Frank Schütte <fschuett@gymnasium-himmelsthuer.de>
  * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-ini_set('display_errors',1);
-ini_set('display_startup_errors',1);
-function kill( $data ) { die( var_dump( $data ) ); }
+//ini_set('display_errors',1);
+//ini_set('display_startup_errors',1);
+//function kill( $data ) { die( var_dump( $data ) ); }
 
 defined ( 'MOODLE_INTERNAL' ) || die ();
 class enrol_openlml_plugin extends enrol_plugin {
@@ -134,7 +134,7 @@ class enrol_openlml_plugin extends enrol_plugin {
 						'cohortid' => $cohort->id 
 				) )) {
 					cohort_delete_cohort ( $cohortid );
-					mtrace ( "    removed cohort " . $cohortid );
+					mtrace ( $this->errorlogtag . "    removed cohort " . $cohortid );
 				}
 			}
 		}
@@ -227,14 +227,14 @@ class enrol_openlml_plugin extends enrol_plugin {
 			foreach ( $cohort_members as $userid => $user ) {
 				if (! isset ( $ldap_members [$userid] )) {
 					cohort_remove_member ( $cohortid, $userid );
-					mtrace ( "    removed " . $userid . " from cohort " . $cohortid );
+					mtrace ( $this->errorlogtag . "    removed " . $userid . " from cohort " . $cohortid );
 				}
 			}
 			
 			foreach ( $ldap_members as $userid => $username ) {
 				if (! $this->cohort_is_member ( $cohortid, $userid )) {
 					cohort_add_member ( $cohortid, $userid );
-					mtrace ( "    added " . $userid . " to cohort " . $cohortid );
+					mtrace ( $this->errorlogtag . "    added " . $userid . " to cohort " . $cohortid );
 				}
 			}
 		}
@@ -249,9 +249,9 @@ class enrol_openlml_plugin extends enrol_plugin {
 		}
 		if (! empty ( $toremove )) {
 			$DB->delete_records_list ( 'cohort_members', 'cohortid', $toremove );
-			mtrace ( "    removed all users from cohorts " . $toremove );
+			mtrace ( $this->errorlogtag . "    removed all users from cohorts " . $toremove );
 			$DB->delete_records_list ( 'cohort', 'id', $toremove );
-			mtrace ( "    remove cohorts " . $toremove );
+			mtrace ( $this->errorlogtag . "    remove cohorts " . $toremove );
 		}
 		
 		if ($this->config->teachers_category_autocreate or $this->config->teachers_category_autoremove) {
@@ -395,14 +395,14 @@ class enrol_openlml_plugin extends enrol_plugin {
 								'customchar1' => $this->enroltype,
 								'roleid' => $this->config->teachers_role 
 						) );
-						mtrace ( "    enroled cohort " . $cohortid . " to course " . $course->id . " as teachers" );
+						mtrace ( $this->errorlogtag . "    enroled cohort " . $cohortid . " to course " . $course->id . " as teachers" );
 					} else {
 						$enrol->add_instance ( $course, array (
 								'customint1' => $cohortid,
 								'customchar1' => $this->enroltype,
 								'roleid' => $this->config->student_role 
 						) );
-						mtrace ( "    enroled cohort " . $cohortid . " to course " . $course->id . " as students" );
+						mtrace ( $this->errorlogtag . "    enroled cohort " . $cohortid . " to course " . $course->id . " as students" );
 					}
 					$edited = true;
 				}
@@ -416,14 +416,14 @@ class enrol_openlml_plugin extends enrol_plugin {
 			if (! isset ( $idcohort [$courseid] )) {
 				foreach ( $instances as $cohort => $instance ) {
 					$enrol->delete_instance ( $instance );
-					mtrace ( "    unenroled cohort " . $cohort . " from course " . $courseid );
+					mtrace ( $this->errorlogtag . "    unenroled cohort " . $cohort . " from course " . $courseid );
 					$edited = true;
 				}
 			} else {
 				foreach ( $instances as $cohort => $instance ) {
 					if (! in_array ( $cohort, $idcohort [$courseid] )) {
 						$enrol->delete_instance ( $instance );
-						mtrace ( "    unenroled cohort " . $cohort . " from course " . $courseid );
+						mtrace ( $this->errorlogtag . "    unenroled cohort " . $cohort . " from course " . $courseid );
 						$edited = true;
 					}
 				}
@@ -462,9 +462,9 @@ class enrol_openlml_plugin extends enrol_plugin {
 			die ();
 		}
 		
-		mtrace ( "Starting enrolments for openlml enrolments plugin..." );
+		mtrace ( $this->errorlogtag . "Starting enrolments for openlml enrolments plugin..." );
 		$this->enrol_openlml_sync ();
-		mtrace ( "finished." );
+		mtrace ( $this->errorlogtag . "finished." );
 	}
 	
 	/**
@@ -1159,15 +1159,8 @@ class enrol_openlml_plugin extends enrol_plugin {
 	
 	private function get_enrol_instance($course) {
 		global $DB;
-		$enrol_instances = enrol_get_instances($course->id,true);
-		foreach($enrol_instances as $instance) {
-			if ($instance->enrol == $this->get_name()) {
-				$openlml = $instance;
-				break;
-			}
-		}
-		$enrol_instance = false;
-		if ($openlml !== NULL) {
+		$enrol_instance = $DB->get_record('enrol', array('enrol' => $this->get_name(), 'courseid' => $course->id));
+		if (!$enrol_instance) {
 			$instanceid = $this->add_default_instance($course);
 			if ($instanceid === NULL) {
 				$instanceid = $this->add_instance($course);
@@ -1208,10 +1201,11 @@ class enrol_openlml_plugin extends enrol_plugin {
 					$to_enrol_students[] = $user;
 				}
 			}
-			print("sync_classes_enrolments: " . print_r($class, TRUE) . "\n");
-			print("   enrol students:   " . print_r($to_enrol_students, TRUE) . "\n");
-			print("   enrol teachers:   " . print_r($to_enrol_teachers, TRUE) . "\n");
-			print("   unenrol users:    " . print_r($to_unenrol, TRUE) . "\n");
+			if (!empty($to_enrol) || !empty($to_unenrol)) {
+				mtrace($this->errorlogtag . "sync_classes_enrolments($class): "
+					. "enrol(" . implode(",", $to_enrol) . ") "
+					. "unenrol(" . implode(",", $to_unenrol) . ")\n");
+			}
 			if (!empty($to_enrol_teachers)) {
 				$this->class_enrol($course, $enrol_instance, $to_enrol_teachers, $this->config->class_teachers_role);
 			}
@@ -1239,7 +1233,7 @@ class enrol_openlml_plugin extends enrol_plugin {
 				continue;
 			}
 			$this->enrol_user($enrol_instance, $user->id, $role);
-			mtrace ( $this->errorlogtag . "enrolled role id $role for " . $user->{username} 
+			mtrace ( $this->errorlogtag . "enrolled role id $role for " . $username 
 				. "(" . $user->id . ") in ".$course->shortname."(".$course->id.")\n" );
 		}
 	}
@@ -1259,7 +1253,7 @@ class enrol_openlml_plugin extends enrol_plugin {
 				continue;
 			}
 			$this->unenrol_user($enrol_instance, $user->id);
-			debugging ( $this->errorlogtag . "unenrolled user ".$user->username."(".$user->id.") from ".$course->shortname."(".$course->id.")\n", DEBUG_DEVELOPER );
+			debugging ( $this->errorlogtag . "unenrolled user ".$username."(".$user->id.") from ".$course->shortname."(".$course->id.")\n", DEBUG_DEVELOPER );
 		}
 	}
 	
