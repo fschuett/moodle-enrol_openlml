@@ -124,7 +124,7 @@ if ($ADMIN->fulltree) {
     		get_string('class_settings','enrol_openlml'), 
     		get_string('class_settings_desc','enrol_openlml')));
     $settings->add(new admin_setting_configcheckbox('enrol_openlml/classes_enabled',
-		get_string('classes_enabled', 'enrol_openlml',
+		get_string('classes_enabled', 'enrol_openlml'),
 		get_string('classes_enabled_desc', 'enrol_openlml'), 0));
     $settings->add(new admin_setting_configtext_trim_lower('enrol_openlml/class_category',
     		get_string('class_category', 'enrol_openlml'),
