@@ -143,7 +143,7 @@ if ($ADMIN->fulltree) {
     		get_string('class_prefixes_desc', 'enrol_openlml'), '5,6,7,8,9,10,11,12'));
     if (!during_initial_install()) {
         $options = get_default_enrol_roles(context_system::instance());
-        $teacher = get_archetype_roles('teacher');
+        $teacher = get_archetype_roles('editingteacher');
         $teacher = reset($teacher);
         $settings->add(new admin_setting_configselect('enrol_openlml/class_teachers_role',
             get_string('class_teachers_role', 'enrol_openlml'),
