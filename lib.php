@@ -1110,22 +1110,24 @@ class enrol_openlml_plugin extends enrol_plugin {
 	 */
 	function sync_classes($userid = "*") {
 		global $CFG;
-		if (!$this->config->class_autocreate && !$this->config->class_autoremove) {
+		if (!$this->config->classes_enabled) {
 			return;
 		}
-		debugging($this->errorlogtag . "sync_classes($userid)...", DEBUG_DEVELOPER);
-		$ldap_classes = $this->get_classes_ldap();
-		$mdl_classes = $this->get_classes_moodle();
-		if ($this->config->class_autocreate) {
-			$to_add = array_diff($ldap_classes,array_keys($mdl_classes));
-			if (!empty($to_add)) {
-				$this->create_classes($to_add);
+		if ($this->config->class_autocreate || $this->config->class_autoremove) {
+			debugging($this->errorlogtag . "sync_classes($userid)...", DEBUG_DEVELOPER);
+			$ldap_classes = $this->get_classes_ldap();
+			$mdl_classes = $this->get_classes_moodle();
+			if ($this->config->class_autocreate) {
+				$to_add = array_diff($ldap_classes,array_keys($mdl_classes));
+				if (!empty($to_add)) {
+					$this->create_classes($to_add);
+				}
 			}
-		}
-		if ($this->config->class_autoremove) {
-			$to_remove = array_diff(array_keys($mdl_classes),$ldap_classes);
-			if (!empty($to_remove)) {
-				$this->remove_classes($to_remove);
+			if ($this->config->class_autoremove) {
+				$to_remove = array_diff(array_keys($mdl_classes),$ldap_classes);
+				if (!empty($to_remove)) {
+					$this->remove_classes($to_remove);
+				}
 			}
 		}
 		if ($userid && strcmp($userid,"*") !== 0) {
