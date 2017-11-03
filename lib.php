@@ -1157,6 +1157,9 @@ class enrol_openlml_plugin extends enrol_plugin {
 		foreach($to_unenrol as $class) {
 			$this->class_unenrol($user, $mdl_classes[$class]->id);
 		}
+		if ($this->config->class_groups_enabled) {
+			$this->sync_user_groups($userid);
+		}
 	}
 	
 	private function get_enrol_instance($course) {
@@ -1217,6 +1220,9 @@ class enrol_openlml_plugin extends enrol_plugin {
 			if (!empty($to_unenrol)) {
 				$this->class_unenrol($course, $enrol_instance, $to_unenrol);
 			}
+			if ($this->config->class_groups_enabled) {
+				$this->sync_class_groups($course->id);
+			}
 		}
 	}
 	
@@ -1257,6 +1263,35 @@ class enrol_openlml_plugin extends enrol_plugin {
 			$this->unenrol_user($enrol_instance, $user->id);
 			debugging ( $this->errorlogtag . "unenrolled user ".$username."(".$user->id.") from ".$course->shortname."(".$course->id.")\n", DEBUG_DEVELOPER );
 		}
+	}
+	
+	private function sync_user_groups($userid) {
+	}
+	
+	private function sync_class_groups($courseid) {
+	}
+	
+	private function get_group($courseid, $name) {
+	}
+	
+	private function class_create_group($courseid, $name) {
+	}
+	
+	private function class_delete_group($courseid, $name) {
+	}
+	
+	private function class_group_is_member($courseid, $userid) {
+		global $CFG;
+		require_once ($CFG->libdir . '/grouplib.php');
+		if ($this->is_teacher($userid)) {
+			$group = groups_get_group_by_name($courseid, get_string('class_group_teachers','enrol_openlml'));
+			
+	}
+	
+	private function class_group_add_member($courseid, $userid) {
+	}
+	
+	private function class_group_remove_member($courseid, $userid) {
 	}
 	
 	/**

@@ -160,4 +160,7 @@ if ($ADMIN->fulltree) {
             get_string('class_students_role', 'enrol_openlml'),
             get_string('class_students_role_desc', 'enrol_openlml'), $student->id, $options));
     }
+    $settings->add(new admin_setting_configcheckbox('enrol_openlml/groups_enabled',
+		get_string('groups_enabled', 'enrol_openlml'),
+		get_string('groups_enabled_desc', 'enrol_openlml'), 0));
 }
